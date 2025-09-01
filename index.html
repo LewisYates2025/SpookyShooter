@@ -309,6 +309,10 @@
         let mousePos = { x: 0, y: 0 };
         let isDodging = 0;
         let dodgeCooldown = 0;
+        // --- ADDED STATE FOR DECORATIONS ---
+        let fogs = [];
+        let cobwebs = [];
+        let skeletons = [];
         
         // --- Touch State ---
         let activeTouches = new Map();
@@ -468,16 +472,22 @@
         function spawnFog() {
             const FOG_COUNT = 150;
             for (let i = 0; i < FOG_COUNT; i++) {
-                const fogEl = document.createElement('div');
-                fogEl.className = 'fog';
                 const size = (Math.random() * 0.4 + 0.1) * Math.min(worldWidth, worldHeight);
-                fogEl.style.width = `${size}px`;
-                fogEl.style.height = `${size}px`;
-                fogEl.style.left = `${Math.random() * worldWidth}px`;
-                fogEl.style.top = `${Math.random() * worldHeight}px`;
-                fogEl.style.animationDelay = `${Math.random() * -20}s`;
-                fogEl.style.animationDuration = `${Math.random() * 20 + 15}s`;
-                worldContainer.appendChild(fogEl);
+                const fog = {
+                    element: document.createElement('div'),
+                    x: Math.random() * worldWidth - size / 2,
+                    y: Math.random() * worldHeight - size / 2,
+                    size: size
+                };
+
+                fog.element.className = 'fog';
+                fog.element.style.width = `${fog.size}px`;
+                fog.element.style.height = `${fog.size}px`;
+                fog.element.style.animationDelay = `${Math.random() * -20}s`;
+                fog.element.style.animationDuration = `${Math.random() * 20 + 15}s`;
+                
+                worldContainer.appendChild(fog.element);
+                fogs.push(fog);
             }
         }
 
@@ -532,21 +542,13 @@
             const MAX_ATTEMPTS = 50;
 
             do {
-                // Clear existing walls from DOM and array
                 walls.forEach(w => w.element.remove());
                 walls = [];
-
-                // Reset grid state
                 for (let y = 0; y < gridHeight; y++) {
                     for (let x = 0; x < gridWidth; x++) {
                         grid[y][x].isWall = false;
                     }
                 }
-
-                // Keep track of which wall elements are still in the world container to remove them later
-                const elementsToRemove = [...worldContainer.getElementsByClassName('wall')];
-                elementsToRemove.forEach(el => el.remove());
-
 
                 const wallDefs = [
                     { x: 0, y: 0, width: worldWidth, height: gridSize }, // Top
@@ -558,7 +560,6 @@
                 wallDefs.forEach(def => {
                     const wall = { element: document.createElement('div'), ...def };
                     wall.element.className = 'wall';
-                    // We will set position in the render loop now relative to camera
                     worldContainer.appendChild(wall.element);
                     walls.push(wall);
 
@@ -616,7 +617,6 @@
                             height: (endGridY - startGridY) * gridSize,
                         };
                         wall.element.className = 'wall';
-                        // Position set in render loop
                         worldContainer.appendChild(wall.element);
                         walls.push(wall);
                         
@@ -680,13 +680,17 @@
             }
             const cornersToDraw = corners.slice(0, COBWEB_COUNT);
             cornersToDraw.forEach(corner => {
-                const webEl = document.createElement('div');
-                webEl.style.position = 'absolute';
-                webEl.style.width = `${gridSize}px`;
-                webEl.style.height = `${gridSize}px`;
-                webEl.style.left = `${corner.x * gridSize}px`;
-                webEl.style.top = `${corner.y * gridSize}px`;
-                webEl.style.pointerEvents = 'none';
+                const web = {
+                    element: document.createElement('div'),
+                    x: corner.x * gridSize,
+                    y: corner.y * gridSize
+                };
+                
+                web.element.style.position = 'absolute';
+                web.element.style.width = `${gridSize}px`;
+                web.element.style.height = `${gridSize}px`;
+                web.element.style.pointerEvents = 'none';
+                
                 let transform = '';
                 switch (corner.type) {
                     case 'TL': transform = 'scale(1, 1)'; break;
@@ -694,9 +698,11 @@
                     case 'BL': transform = 'scale(1, -1)'; break;
                     case 'BR': transform = 'scale(-1, -1)'; break;
                 }
-                webEl.style.transform = transform;
-                webEl.innerHTML = getCobwebSVG();
-                worldContainer.appendChild(webEl);
+                web.element.style.transform = transform;
+                web.element.innerHTML = getCobwebSVG();
+
+                worldContainer.appendChild(web.element);
+                cobwebs.push(web);
             });
         }
 
@@ -737,16 +743,21 @@
             const tilesToDraw = floorTiles.slice(0, SKELETON_COUNT);
 
             tilesToDraw.forEach(tile => {
-                const skeletonEl = document.createElement('div');
-                skeletonEl.style.position = 'absolute';
-                skeletonEl.style.width = `${gridSize}px`;
-                skeletonEl.style.height = `${gridSize}px`;
-                skeletonEl.style.left = `${tile.x * gridSize}px`;
-                skeletonEl.style.top = `${tile.y * gridSize}px`;
-                skeletonEl.style.pointerEvents = 'none';
-                skeletonEl.style.transform = `rotate(${Math.random() * 360}deg)`;
-                skeletonEl.innerHTML = getSkeletonSVG();
-                worldContainer.appendChild(skeletonEl);
+                const skeleton = {
+                    element: document.createElement('div'),
+                    x: tile.x * gridSize,
+                    y: tile.y * gridSize
+                };
+                
+                skeleton.element.style.position = 'absolute';
+                skeleton.element.style.width = `${gridSize}px`;
+                skeleton.element.style.height = `${gridSize}px`;
+                skeleton.element.style.pointerEvents = 'none';
+                skeleton.element.style.transform = `rotate(${Math.random() * 360}deg)`;
+                skeleton.element.innerHTML = getSkeletonSVG();
+
+                worldContainer.appendChild(skeleton.element);
+                skeletons.push(skeleton);
             });
         }
 
@@ -759,7 +770,6 @@
             ripple.style.width = `${radius * 2}px`;
             ripple.style.height = `${radius * 2}px`;
             ripple.style.boxShadow = `0 0 0 4px ${color}`;
-            // IMPORTANT: Explosions are temporary and exist on the screen, so they must be added to gameArea, not worldContainer
             gameArea.appendChild(ripple);
 
             setTimeout(() => {
@@ -954,26 +964,26 @@
 
             if(targetNode) {
                 enemy.path = findPath(startNode, targetNode);
-                 // We don't draw the path anymore since its coordinates are relative to the world, not the screen
-                 // if (enemies.indexOf(enemy) === 0) drawPath(enemy.path);
             }
         }
 
         function resetGame() {
             gameOverModal.style.display = 'none';
-            // Also clear gameArea of any leftover ripples
             const elementsToRemove = [...gameArea.getElementsByClassName('ripple')];
             elementsToRemove.forEach(el => el.remove());
             
             worldContainer.innerHTML = ''; // Clear all old game elements
-            spawnFog();
-            createPlayer();
             
             bullets = [];
             enemyBullets = [];
-            healthPickups.forEach(p => p.element.remove());
             healthPickups = [];
+            fogs = [];
+            cobwebs = [];
+            skeletons = [];
             drawPath([]);
+
+            spawnFog();
+            createPlayer();
             
             sphere.style.display = 'flex';
 
@@ -1133,7 +1143,7 @@
             trail.className = 'dodge-indicator';
             trail.style.left = `${x - 5 - camera.x}px`;
             trail.style.top = `${y - 5 - camera.y}px`;
-            gameArea.appendChild(trail); // Add to gameArea so it's not affected by world movement
+            gameArea.appendChild(trail);
             setTimeout(() => trail.remove(), 300);
         }
 
@@ -1226,8 +1236,6 @@
                         enemy.x = targetX;
                         enemy.y = targetY;
                         enemy.path.shift();
-                        // if (index === 0) drawPath(enemy.path); // Path drawing is disabled for now
-                        // If path is now empty, get a new one immediately
                         if (enemy.path.length === 0) {
                            const isAggro = (enemy.type === 'chaser' && player) || (enemy.type === 'shooter');
                            setNewPathForEnemy(enemy, isAggro);
@@ -1421,35 +1429,26 @@
                 healthBar.style.width = '0%';
             }
             
-            // Note: Background decorations (fog, walls, etc.) are now static relative to the world,
-            // so their positions set on creation are correct. They will appear to move with the world.
-            // Only dynamic objects need their screen positions calculated each frame.
-            const dynamicObjects = [
-                ...enemies, 
-                ...bullets, 
-                ...enemyBullets, 
-                ...healthPickups
-            ];
-            
-            // To optimize, we could also render walls and other static items here if they are on screen.
-            // For now, we only update dynamic objects.
+            // --- RENDER STATIC AND DYNAMIC OBJECTS ---
             walls.forEach(w => {
                  w.element.style.left = `${w.x - camera.x}px`;
                  w.element.style.top = `${w.y - camera.y}px`;
                  w.element.style.width = `${w.width}px`;
                  w.element.style.height = `${w.height}px`;
             });
-            
-            // This is a bit inefficient as it redraws all decorations every frame.
-            // A better approach would be to only draw what's visible, but this will fix the flicker.
-            [...worldContainer.children].forEach(child => {
-                 if (child.className === 'fog' || child.className.includes('cobweb') || child.className.includes('skeleton')) {
-                     // These are trickier as their initial positions are absolute. We'd need to store them.
-                     // For simplicity, this implementation will make them appear static on screen which is not ideal.
-                     // The CORE fix is for the player, enemies, and bullets.
-                 }
-            });
 
+            fogs.forEach(f => {
+                f.element.style.left = `${f.x - camera.x}px`;
+                f.element.style.top = `${f.y - camera.y}px`;
+            });
+            cobwebs.forEach(c => {
+                c.element.style.left = `${c.x - camera.x}px`;
+                c.element.style.top = `${c.y - camera.y}px`;
+            });
+            skeletons.forEach(s => {
+                s.element.style.left = `${s.x - camera.x}px`;
+                s.element.style.top = `${s.y - camera.y}px`;
+            });
 
             enemies.forEach(e => {
                 e.element.style.left = `${e.x - e.radius - camera.x}px`;
