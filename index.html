@@ -44,16 +44,12 @@
         }
         .bullet {
             position: absolute;
-            width: 10px;
-            height: 10px;
             background-color: white;
             border-radius: 50%;
             pointer-events: none; /* Bullets should not interfere with mouse events */
         }
         .enemy-bullet {
             position: absolute;
-            width: 10px;
-            height: 10px;
             background-color: #f87171; /* red-400 */
             box-shadow: 0 0 10px #f87171;
             border-radius: 50%;
@@ -182,8 +178,6 @@
         }
         .health-pickup {
             position: absolute;
-            width: 24px;
-            height: 24px;
             background-color: #22c55e; /* green-500 */
             border-radius: 50%;
             border: 2px solid white;
@@ -261,16 +255,17 @@
 
 
         // --- Configuration ---
+        const VIRTUAL_WIDTH = 1800; // The desired horizontal resolution of the game
         const playerSpeed = 8;
         const bulletSpeed = 32;
-        const enemyBulletSpeed = bulletSpeed / 4; // also gets faster
-        const baseEnemyCount = 0; // The number of enemies will be the wave number
+        const enemyBulletSpeed = bulletSpeed / 4; 
+        const baseEnemyCount = 0; 
         const enemyRadius = 20;
         const bulletRadius = 5;
         const playerRadius = 20;
         const baseEnemySpeed = playerSpeed / 2;
-        const pathfindingUpdateRate = 500; // Loops between path updates
-        const fireChargeTime = 80; // Frames it takes for enemy to fire
+        const pathfindingUpdateRate = 500; 
+        const fireChargeTime = 80; 
         const playerFireCooldownTime = ((fireChargeTime / 10) * 3) / 1.5;
         const maxPlayerHealth = 100;
         const enemyBulletDamage = 20;
@@ -303,16 +298,13 @@
         let pathDots = [];
         let currentWave = 0;
         let isWaveTransitioning = false;
-        let gameStarted = false; // Prevents multiple game loops
+        let gameStarted = false; 
         let playerFireCooldown = 0;
         let isMouseDown = false;
         let mousePos = { x: 0, y: 0 };
         let isDodging = 0;
         let dodgeCooldown = 0;
-        // --- ADDED STATE FOR DECORATIONS ---
-        let fogs = [];
-        let cobwebs = [];
-        let skeletons = [];
+        let fogs = [], cobwebs = [], skeletons = [];
         
         // --- Touch State ---
         let activeTouches = new Map();
@@ -333,12 +325,8 @@
         // --- A* Pathfinding Node ---
         class Node {
             constructor(x, y) {
-                this.x = x; // grid x
-                this.y = y; // grid y
-                this.isWall = false;
-                this.gCost = 0;
-                this.hCost = 0;
-                this.fCost = 0;
+                this.x = x; this.y = y; this.isWall = false;
+                this.gCost = 0; this.hCost = 0; this.fCost = 0;
                 this.parent = null;
             }
         }
@@ -383,12 +371,10 @@
         function createPlayer() {
             const playerEl = document.createElement('div');
             playerEl.id = 'sphere';
-            playerEl.className = 'w-10 h-10 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50'; // Ghostly cyan
-            
+            playerEl.className = 'w-10 h-10 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400/50';
             const turretEl = document.createElement('div');
             turretEl.id = 'turret';
             playerEl.appendChild(turretEl);
-            
             worldContainer.appendChild(playerEl);
             sphere = playerEl;
             turret = turretEl;
@@ -397,10 +383,7 @@
         function spawnHealthPickup(x, y) {
             const pickupRadius = 12;
             const pickup = {
-                element: document.createElement('div'),
-                x: x,
-                y: y,
-                radius: pickupRadius,
+                element: document.createElement('div'), x: x, y: y, radius: pickupRadius,
             };
             pickup.element.className = 'health-pickup';
             worldContainer.appendChild(pickup.element);
@@ -410,45 +393,30 @@
         function spawnEnemies(count) {
             enemies.forEach(e => e.element.remove());
             enemies = [];
-            
             const playerNode = player ? getNodeFromWorldPoint(player.x, player.y) : null;
-            const minSpawnDist = 10; // 10 grid squares away
+            const minSpawnDist = 10; 
 
             for(let i = 0; i < count; i++) {
                 let validPosition = false;
                 let spawnNode;
                 let attempts = 0;
-
                 while(!validPosition && attempts < gridWidth * gridHeight * 2) {
                     const gridX = Math.floor(Math.random() * gridWidth);
                     const gridY = Math.floor(Math.random() * gridHeight);
                     spawnNode = grid[gridY][gridX];
-
                     const distToPlayer = playerNode ? Math.hypot(gridX - playerNode.x, gridY - playerNode.y) : Infinity;
-
-                    if (!spawnNode.isWall && distToPlayer >= minSpawnDist) {
-                        validPosition = true;
-                    }
+                    if (!spawnNode.isWall && distToPlayer >= minSpawnDist) validPosition = true;
                     attempts++;
                 }
-                
-                if (!spawnNode) { // Failsafe if screen is too crowded
-                    spawnNode = grid[0][0]; // Just spawn at the corner
-                }
+                if (!spawnNode) spawnNode = grid[0][0];
 
-                const enemyType = Math.random() < 0.3 ? 'chaser' : 'shooter'; // 30% chance for a chaser
-
+                const enemyType = Math.random() < 0.3 ? 'chaser' : 'shooter';
                 const newEnemy = {
                     element: document.createElement('div'),
-                    x: spawnNode.x * gridSize + enemyRadius,
-                    y: spawnNode.y * gridSize + enemyRadius,
-                    radius: enemyRadius,
-                    path: [],
-                    targetNode: null,
-                    type: enemyType,
+                    x: spawnNode.x * gridSize + enemyRadius, y: spawnNode.y * gridSize + enemyRadius,
+                    radius: enemyRadius, path: [], targetNode: null, type: enemyType,
                     speed: enemyType === 'chaser' ? baseEnemySpeed * 1.5 : baseEnemySpeed,
-                    lastGridPos: { x: -1, y: -1 },
-                    stuckCounter: 0,
+                    lastGridPos: { x: -1, y: -1 }, stuckCounter: 0,
                 };
 
                 if (newEnemy.type === 'shooter') {
@@ -460,10 +428,6 @@
                 } else {
                      newEnemy.element.className = 'enemy-chaser';
                 }
-                
-                newEnemy.element.style.width = `${newEnemy.radius * 2}px`;
-                newEnemy.element.style.height = `${newEnemy.radius * 2}px`;
-
                 worldContainer.appendChild(newEnemy.element);
                 enemies.push(newEnemy);
             }
@@ -479,49 +443,36 @@
                     y: Math.random() * worldHeight - size / 2,
                     size: size
                 };
-
                 fog.element.className = 'fog';
-                fog.element.style.width = `${fog.size}px`;
-                fog.element.style.height = `${fog.size}px`;
                 fog.element.style.animationDelay = `${Math.random() * -20}s`;
                 fog.element.style.animationDuration = `${Math.random() * 20 + 15}s`;
-                
                 worldContainer.appendChild(fog.element);
                 fogs.push(fog);
             }
         }
 
         function isMapValid() {
-            let firstOpenNode = null;
-            let totalOpenNodes = 0;
-
+            let firstOpenNode = null, totalOpenNodes = 0;
             for (let y = 0; y < gridHeight; y++) {
                 for (let x = 0; x < gridWidth; x++) {
                     if (!grid[y][x].isWall) {
                         totalOpenNodes++;
-                        if (!firstOpenNode) {
-                            firstOpenNode = grid[y][x];
-                        }
+                        if (!firstOpenNode) firstOpenNode = grid[y][x];
                     }
                 }
             }
-            
             if (!firstOpenNode) return true; 
 
             const queue = [firstOpenNode];
             const visited = new Set([`${firstOpenNode.x},${firstOpenNode.y}`]);
             let reachableCount = 0;
-
             while (queue.length > 0) {
                 const currentNode = queue.shift();
                 reachableCount++;
-
                 for (let y = -1; y <= 1; y++) {
                     for (let x = -1; x <= 1; x++) {
                         if (x === 0 && y === 0) continue;
-                        const checkX = currentNode.x + x;
-                        const checkY = currentNode.y + y;
-
+                        const checkX = currentNode.x + x, checkY = currentNode.y + y;
                         if (checkX >= 0 && checkX < gridWidth && checkY >= 0 && checkY < gridHeight) {
                             const neighbor = grid[checkY][checkX];
                             const neighborId = `${neighbor.x},${neighbor.y}`;
@@ -533,269 +484,164 @@
                     }
                 }
             }
-            
             return reachableCount === totalOpenNodes;
         }
 
         function spawnWalls() {
             let attempt = 0;
             const MAX_ATTEMPTS = 50;
-
             do {
                 walls.forEach(w => w.element.remove());
                 walls = [];
                 for (let y = 0; y < gridHeight; y++) {
-                    for (let x = 0; x < gridWidth; x++) {
-                        grid[y][x].isWall = false;
-                    }
+                    for (let x = 0; x < gridWidth; x++) grid[y][x].isWall = false;
                 }
-
                 const wallDefs = [
-                    { x: 0, y: 0, width: worldWidth, height: gridSize }, // Top
-                    { x: 0, y: worldHeight - gridSize, width: worldWidth, height: gridSize }, // Bottom
-                    { x: 0, y: 0, width: gridSize, height: worldHeight }, // Left
-                    { x: worldWidth - gridSize, y: 0, width: gridSize, height: worldHeight } // Right
+                    { x: 0, y: 0, width: worldWidth, height: gridSize }, 
+                    { x: 0, y: worldHeight - gridSize, width: worldWidth, height: gridSize },
+                    { x: 0, y: 0, width: gridSize, height: worldHeight }, 
+                    { x: worldWidth - gridSize, y: 0, width: gridSize, height: worldHeight }
                 ];
-
                 wallDefs.forEach(def => {
                     const wall = { element: document.createElement('div'), ...def };
                     wall.element.className = 'wall';
                     worldContainer.appendChild(wall.element);
                     walls.push(wall);
-
                     const startGridX = Math.max(0, Math.floor(def.x / gridSize));
                     const endGridX = Math.min(gridWidth, Math.ceil((def.x + def.width) / gridSize));
                     const startGridY = Math.max(0, Math.floor(def.y / gridSize));
                     const endGridY = Math.min(gridHeight, Math.ceil((def.y + def.height) / gridSize));
-                    
                     for(let y = startGridY; y < endGridY; y++) {
                         for(let x = startGridX; x < endGridX; x++) {
-                             if (x < gridWidth && y < gridHeight) {
-                                grid[y][x].isWall = true;
-                            }
+                             if (x < gridWidth && y < gridHeight) grid[y][x].isWall = true;
                         }
                     }
                 });
-
                 const wallCount = 165;
                 const maxWallLength = 16;
                 for (let i = 0; i < wallCount; i++) {
-                    const length = Math.floor(Math.random() * (maxWallLength - 3 + 1)) + 3;
+                    const length = Math.floor(Math.random() * (maxWallLength - 2)) + 3;
                     const isHorizontal = Math.random() > 0.5;
-
                     let startGridX, startGridY, endGridX, endGridY;
-
                     if (isHorizontal) {
                         startGridX = Math.floor(Math.random() * (gridWidth - length));
                         startGridY = Math.floor(Math.random() * (gridHeight - 2)) + 1;
                         endGridX = startGridX + length;
                         endGridY = startGridY + 1;
-                    } else { // Vertical
+                    } else {
                         startGridX = Math.floor(Math.random() * (gridWidth - 2)) + 1;
                         startGridY = Math.floor(Math.random() * (gridHeight - length));
                         endGridX = startGridX + 1;
                         endGridY = startGridY + length;
                     }
-                    
                     let canPlace = true;
                     for (let y = startGridY; y < endGridY; y++) {
                         for (let x = startGridX; x < endGridX; x++) {
                             if (y < gridHeight && x < gridWidth && grid[y][x].isWall) {
-                                canPlace = false;
-                                break;
+                                canPlace = false; break;
                             }
                         }
                         if (!canPlace) break;
                     }
-                    
                     if (canPlace) {
                          const wall = {
                             element: document.createElement('div'),
-                            x: startGridX * gridSize,
-                            y: startGridY * gridSize,
+                            x: startGridX * gridSize, y: startGridY * gridSize,
                             width: (endGridX - startGridX) * gridSize,
                             height: (endGridY - startGridY) * gridSize,
                         };
                         wall.element.className = 'wall';
                         worldContainer.appendChild(wall.element);
                         walls.push(wall);
-                        
                         for (let y = startGridY; y < endGridY; y++) {
                             for (let x = startGridX; x < endGridX; x++) {
-                                 if (y < gridHeight && x < gridWidth) {
-                                    grid[y][x].isWall = true;
-                                }
+                                 if (y < gridHeight && x < gridWidth) grid[y][x].isWall = true;
                             }
                         }
                     }
                 }
                 attempt++;
             } while (!isMapValid() && attempt < MAX_ATTEMPTS);
-            
             spawnCobwebs();
             spawnSkeletons();
-
-            if (attempt >= MAX_ATTEMPTS) {
-                console.warn("Could not generate a fully valid map. Some areas might be inaccessible.");
-            }
-        }
-
-        function getCobwebSVG() {
-            return `
-            <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <g stroke="rgba(200,200,200,0.15)" stroke-width="2" fill="none">
-                    <line x1="0" y1="0" x2="100" y2="0" />
-                    <line x1="0" y1="0" x2="86.6" y2="50" />
-                    <line x1="0" y1="0" x2="50" y2="86.6" />
-                    <line x1="0" y1="0" x2="0" y2="100" />
-                    <path d="M 100 0 A 100 100 0 0 0 0 100" />
-                    <path d="M 75 0 A 75 75 0 0 0 0 75" />
-                    <path d="M 50 0 A 50 50 0 0 0 0 50" />
-                    <path d="M 25 0 A 25 25 0 0 0 0 25" />
-                </g>
-            </svg>`;
+            if (attempt >= MAX_ATTEMPTS) console.warn("Could not generate a valid map.");
         }
 
         function spawnCobwebs() {
+            const cobwebSVG = `<svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="rgba(200,200,200,0.15)" stroke-width="2" fill="none"><line x1="0" y1="0" x2="100" y2="0" /><line x1="0" y1="0" x2="86.6" y2="50" /><line x1="0" y1="0" x2="50" y2="86.6" /><line x1="0" y1="0" x2="0" y2="100" /><path d="M 100 0 A 100 100 0 0 0 0 100" /><path d="M 75 0 A 75 75 0 0 0 0 75" /><path d="M 50 0 A 50 50 0 0 0 0 50" /><path d="M 25 0 A 25 25 0 0 0 0 25" /></g></svg>`;
             const COBWEB_COUNT = 300;
             const corners = [];
             for (let y = 1; y < gridHeight - 1; y++) {
                 for (let x = 1; x < gridWidth - 1; x++) {
                     if (!grid[y][x].isWall) {
-                        const isWallTop = grid[y - 1][x].isWall;
-                        const isWallBottom = grid[y + 1][x].isWall;
-                        const isWallLeft = grid[y][x - 1].isWall;
-                        const isWallRight = grid[y][x + 1].isWall;
-
-                        if (isWallTop && isWallLeft) corners.push({ x, y, type: 'TL' });
-                        if (isWallTop && isWallRight) corners.push({ x, y, type: 'TR' });
-                        if (isWallBottom && isWallLeft) corners.push({ x, y, type: 'BL' });
-                        if (isWallBottom && isWallRight) corners.push({ x, y, type: 'BR' });
+                        if (grid[y - 1][x].isWall && grid[y][x - 1].isWall) corners.push({ x, y, type: 'TL' });
+                        if (grid[y - 1][x].isWall && grid[y][x + 1].isWall) corners.push({ x, y, type: 'TR' });
+                        if (grid[y + 1][x].isWall && grid[y][x - 1].isWall) corners.push({ x, y, type: 'BL' });
+                        if (grid[y + 1][x].isWall && grid[y][x + 1].isWall) corners.push({ x, y, type: 'BR' });
                     }
                 }
             }
-            for (let i = corners.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [corners[i], corners[j]] = [corners[j], corners[i]];
-            }
+            corners.sort(() => 0.5 - Math.random());
             const cornersToDraw = corners.slice(0, COBWEB_COUNT);
             cornersToDraw.forEach(corner => {
                 const web = {
                     element: document.createElement('div'),
-                    x: corner.x * gridSize,
-                    y: corner.y * gridSize
+                    x: corner.x * gridSize, y: corner.y * gridSize
                 };
-                
                 web.element.style.position = 'absolute';
-                web.element.style.width = `${gridSize}px`;
-                web.element.style.height = `${gridSize}px`;
                 web.element.style.pointerEvents = 'none';
-                
                 let transform = '';
                 switch (corner.type) {
-                    case 'TL': transform = 'scale(1, 1)'; break;
                     case 'TR': transform = 'scale(-1, 1)'; break;
                     case 'BL': transform = 'scale(1, -1)'; break;
                     case 'BR': transform = 'scale(-1, -1)'; break;
                 }
                 web.element.style.transform = transform;
-                web.element.innerHTML = getCobwebSVG();
-
+                web.element.innerHTML = cobwebSVG;
                 worldContainer.appendChild(web.element);
                 cobwebs.push(web);
             });
         }
-
-        function getSkeletonSVG() {
-            return `
-            <svg width="100%" height="100%" viewBox="0 0 40 40">
-                <g stroke="rgba(226, 232, 240, 0.4)" stroke-width="2" fill="none" stroke-linecap="round">
-                    <circle cx="20" cy="8" r="4" />
-                    <line x1="20" y1="12" x2="20" y2="28" />
-                    <line x1="14" y1="16" x2="26" y2="16" />
-                    <line x1="14" y1="20" x2="26" y2="20" />
-                    <line x1="15" y1="24" x2="25" y2="24" />
-                    <line x1="14" y1="16" x2="8" y2="12" />
-                    <line x1="26" y1="16" x2="32" y2="12" />
-                    <line x1="20" y1="28" x2="14" y2="34" />
-                    <line x1="20" y1="28" x2="26" y2="34" />
-                </g>
-            </svg>`;
-        }
-
         function spawnSkeletons() {
+            const skeletonSVG = `<svg width="100%" height="100%" viewBox="0 0 40 40"><g stroke="rgba(226, 232, 240, 0.4)" stroke-width="2" fill="none" stroke-linecap="round"><circle cx="20" cy="8" r="4" /><line x1="20" y1="12" x2="20" y2="28" /><line x1="14" y1="16" x2="26" y2="16" /><line x1="14" y1="20" x2="26" y2="20" /><line x1="15" y1="24" x2="25" y2="24" /><line x1="14" y1="16" x2="8" y2="12" /><line x1="26" y1="16" x2="32" y2="12" /><line x1="20" y1="28" x2="14" y2="34" /><line x1="20" y1="28" x2="26" y2="34" /></g></svg>`;
             const SKELETON_COUNT = 25;
             const floorTiles = [];
-
             for (let y = 1; y < gridHeight - 1; y++) {
                 for (let x = 1; x < gridWidth - 1; x++) {
-                    if (!grid[y][x].isWall) {
-                        floorTiles.push({ x, y });
-                    }
+                    if (!grid[y][x].isWall) floorTiles.push({ x, y });
                 }
             }
-
-            for (let i = floorTiles.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [floorTiles[i], floorTiles[j]] = [floorTiles[j], floorTiles[i]];
-            }
-
+            floorTiles.sort(() => 0.5 - Math.random());
             const tilesToDraw = floorTiles.slice(0, SKELETON_COUNT);
-
             tilesToDraw.forEach(tile => {
                 const skeleton = {
                     element: document.createElement('div'),
-                    x: tile.x * gridSize,
-                    y: tile.y * gridSize
+                    x: tile.x * gridSize, y: tile.y * gridSize
                 };
-                
                 skeleton.element.style.position = 'absolute';
-                skeleton.element.style.width = `${gridSize}px`;
-                skeleton.element.style.height = `${gridSize}px`;
                 skeleton.element.style.pointerEvents = 'none';
                 skeleton.element.style.transform = `rotate(${Math.random() * 360}deg)`;
-                skeleton.element.innerHTML = getSkeletonSVG();
-
+                skeleton.element.innerHTML = skeletonSVG;
                 worldContainer.appendChild(skeleton.element);
                 skeletons.push(skeleton);
             });
         }
 
-
         function createExplosion(x, y, radius, color) {
             const ripple = document.createElement('div');
             ripple.className = 'ripple';
-            ripple.style.left = `${x - radius - camera.x}px`;
-            ripple.style.top = `${y - radius - camera.y}px`;
-            ripple.style.width = `${radius * 2}px`;
-            ripple.style.height = `${radius * 2}px`;
-            ripple.style.boxShadow = `0 0 0 4px ${color}`;
+            const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
+            ripple.style.left = `${(x - radius - camera.x) * scale}px`;
+            ripple.style.top = `${(y - radius - camera.y) * scale}px`;
+            ripple.style.width = `${(radius * 2) * scale}px`;
+            ripple.style.height = `${(radius * 2) * scale}px`;
+            ripple.style.boxShadow = `0 0 0 ${4 * scale}px ${color}`;
             gameArea.appendChild(ripple);
-
-            setTimeout(() => {
-                ripple.remove();
-            }, 170);
-        }
-        
-        function drawPath(path) {
-            pathDots.forEach(dot => dot.remove());
-            pathDots = [];
-            if (!path) return;
-            path.forEach(node => {
-                const dot = document.createElement('div');
-                dot.className = 'path-dot';
-                const dotX = node.x * gridSize + (gridSize / 2) - 4;
-                const dotY = node.y * gridSize + (gridSize / 2) - 4;
-                dot.style.left = `${dotX}px`;
-                dot.style.top = `${dotY}px`;
-                worldContainer.appendChild(dot);
-                pathDots.push(dot);
-            });
+            setTimeout(() => ripple.remove(), 170);
         }
         
         function hasLineOfSight(startX, startY, endX, endY) {
-            const dx = endX - startX;
-            const dy = endY - startY;
+            const dx = endX - startX, dy = endY - startY;
             const distance = Math.hypot(dx, dy);
             const step = gridSize / 4; 
             const steps = Math.floor(distance / step);
@@ -805,27 +651,17 @@
                 const currentY = startY + (dy * i) / steps;
                 for (const wall of walls) {
                     if (currentX >= wall.x && currentX <= wall.x + wall.width &&
-                        currentY >= wall.y && currentY <= wall.y + wall.height) {
-                        return false;
-                    }
+                        currentY >= wall.y && currentY <= wall.y + wall.height) return false;
                 }
             }
             return true;
         }
         
         function screenToWorld(screenX, screenY) {
-            return { x: screenX + camera.x, y: screenY + camera.y };
-        }
-
-        function isEntityOnScreen(entity) {
-            if (!entity) return false;
-            // AABB collision check between entity's bounding box and camera viewport
-            return (
-                entity.x + entity.radius > camera.x &&
-                entity.x - entity.radius < camera.x + gameArea.clientWidth &&
-                entity.y + entity.radius > camera.y &&
-                entity.y - entity.radius < camera.y + gameArea.clientHeight
-            );
+            const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
+            const worldX = (screenX / scale) + camera.x;
+            const worldY = (screenY / scale) + camera.y;
+            return { x: worldX, y: worldY };
         }
 
         function firePlayerBullet(targetX, targetY) {
@@ -873,21 +709,27 @@
                 }
                 openList.splice(openList.indexOf(currentNode), 1);
                 closedList.add(currentNode);
-                if (currentNode === targetNode) return retracePath(startNode, targetNode);
+                if (currentNode === targetNode) {
+                    const path = [];
+                    let pathNode = targetNode;
+                    while(pathNode !== startNode && pathNode.parent) {
+                        path.push(pathNode);
+                        pathNode = pathNode.parent;
+                    }
+                    return path.reverse();
+                }
                 for (let y = -1; y <= 1; y++) {
                     for (let x = -1; x <= 1; x++) {
-                        // This condition ensures we only check N, S, E, W, not diagonals or the center
                         if (Math.abs(x) === Math.abs(y)) continue; 
-
                         const checkX = currentNode.x + x;
                         const checkY = currentNode.y + y;
                         if (checkX >= 0 && checkX < gridWidth && checkY >= 0 && checkY < gridHeight) {
                             const neighbor = grid[checkY][checkX];
                             if (neighbor.isWall || closedList.has(neighbor)) continue;
-                            const newMovementCostToNeighbor = currentNode.gCost + getDistance(currentNode, neighbor);
-                            if (newMovementCostToNeighbor < neighbor.gCost || !openList.includes(neighbor)) {
-                                neighbor.gCost = newMovementCostToNeighbor;
-                                neighbor.hCost = getDistance(neighbor, targetNode);
+                            const newMovementCost = currentNode.gCost + (Math.abs(x) + Math.abs(y) > 1 ? 14 : 10);
+                            if (newMovementCost < neighbor.gCost || !openList.includes(neighbor)) {
+                                neighbor.gCost = newMovementCost;
+                                neighbor.hCost = Math.abs(neighbor.x - targetNode.x) + Math.abs(neighbor.y - targetNode.y);
                                 neighbor.fCost = neighbor.gCost + neighbor.hCost;
                                 neighbor.parent = currentNode;
                                 if (!openList.includes(neighbor)) openList.push(neighbor);
@@ -899,159 +741,89 @@
             return [];
         }
 
-        function retracePath(startNode, endNode) {
-            const path = [];
-            let currentNode = endNode;
-            while(currentNode !== startNode && currentNode.parent) {
-                path.push(currentNode);
-                currentNode = currentNode.parent;
-            }
-            return path.reverse();
-        }
-
-        function getDistance(nodeA, nodeB) {
-            const dstX = Math.abs(nodeA.x - nodeB.x);
-            const dstY = Math.abs(nodeA.y - nodeB.y);
-            return dstX > dstY ? 14 * dstY + 10 * (dstX - dstY) : 14 * dstX + 10 * (dstY - dstX);
-        }
-
         function setNewPathForEnemy(enemy, isAggro = false) {
             const startNode = getNodeFromWorldPoint(enemy.x, enemy.y);
             if (!startNode) return;
-            
             let targetNode;
-            // Aggro enemies always target the player
             if (isAggro && player) {
                  targetNode = getNodeFromWorldPoint(player.x, player.y);
             } else {
-                // Non-aggro enemies have different logic based on enemy count
-                if (enemies.length < 5) { // Fewer than 5 enemies, find an ON-SCREEN target
+                if (enemies.length < 5) { 
                     let attempts = 0;
-                    const MAX_ATTEMPTS = 100; // Prevent infinite loop
+                    const MAX_ATTEMPTS = 100;
                     do {
-                        // Calculate on-screen grid boundaries, clamping to world edges
+                        const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
+                        const viewableWorldWidth = gameArea.clientWidth / scale;
+                        const viewableWorldHeight = gameArea.clientHeight / scale;
                         const startGridX = Math.max(0, Math.floor(camera.x / gridSize));
                         const startGridY = Math.max(0, Math.floor(camera.y / gridSize));
-                        const endGridX = Math.min(gridWidth - 1, Math.floor((camera.x + gameArea.clientWidth) / gridSize));
-                        const endGridY = Math.min(gridHeight - 1, Math.floor((camera.y + gameArea.clientHeight) / gridSize));
-                        
-                        // Check if the calculated range is valid
+                        const endGridX = Math.min(gridWidth - 1, Math.floor((camera.x + viewableWorldWidth) / gridSize));
+                        const endGridY = Math.min(gridHeight - 1, Math.floor((camera.y + viewableWorldHeight) / gridSize));
                         if (startGridX >= endGridX || startGridY >= endGridY) {
-                            targetNode = null; // Failsafe
-                            break;
+                            targetNode = null; break;
                         }
-
-                        // Pick a random grid coordinate within the on-screen range
                         const randX = Math.floor(Math.random() * (endGridX - startGridX + 1)) + startGridX;
                         const randY = Math.floor(Math.random() * (endGridY - startGridY + 1)) + startGridY;
-                        
                         targetNode = grid[randY][randX];
                         attempts++;
-                    } while (attempts < MAX_ATTEMPTS && (!targetNode || targetNode.isWall)); // Retry if it's a wall or invalid
-
-                    // If after many attempts we still haven't found a valid on-screen tile, fall back to the old random method
+                    } while (attempts < MAX_ATTEMPTS && (!targetNode || targetNode.isWall));
                     if (!targetNode || targetNode.isWall) {
-                        do {
-                           targetNode = grid[Math.floor(Math.random() * gridHeight)][Math.floor(Math.random() * gridWidth)];
-                        } while(targetNode && targetNode.isWall);
+                        do { targetNode = grid[Math.floor(Math.random() * gridHeight)][Math.floor(Math.random() * gridWidth)]; } 
+                        while(targetNode && targetNode.isWall);
                     }
-                } else { // 5 or more enemies, use original random target logic
-                     do {
-                        targetNode = grid[Math.floor(Math.random() * gridHeight)][Math.floor(Math.random() * gridWidth)];
-                    } while(targetNode && targetNode.isWall);
+                } else {
+                     do { targetNode = grid[Math.floor(Math.random() * gridHeight)][Math.floor(Math.random() * gridWidth)]; } 
+                     while(targetNode && targetNode.isWall);
                 }
             }
-
-            if(targetNode) {
-                enemy.path = findPath(startNode, targetNode);
-            }
+            if(targetNode) enemy.path = findPath(startNode, targetNode);
         }
 
         function resetGame() {
             gameOverModal.style.display = 'none';
-            const elementsToRemove = [...gameArea.getElementsByClassName('ripple')];
-            elementsToRemove.forEach(el => el.remove());
+            worldContainer.innerHTML = '';
             
-            worldContainer.innerHTML = ''; // Clear all old game elements
+            bullets = []; enemyBullets = []; healthPickups = [];
+            fogs = []; cobwebs = []; skeletons = [];
             
-            bullets = [];
-            enemyBullets = [];
-            healthPickups = [];
-            fogs = [];
-            cobwebs = [];
-            skeletons = [];
-            drawPath([]);
-
-            spawnFog();
             createPlayer();
-            
-            sphere.style.display = 'flex';
-
             createGrid();
             spawnWalls();
+            spawnFog();
             
             player = { 
-                x: worldWidth / 2, 
-                y: worldHeight / 2, 
-                radius: playerRadius,
-                health: maxPlayerHealth,
-                dodgeVector: {x: 0, y: 0}
+                x: worldWidth / 2, y: worldHeight / 2, radius: playerRadius,
+                health: maxPlayerHealth, dodgeVector: {x: 0, y: 0}
             };
-            playerFireCooldown = 0;
-            dodgeCooldown = 0;
-            isDodging = 0;
-            
+            playerFireCooldown = 0; dodgeCooldown = 0; isDodging = 0;
             currentWave = 0;
             startNewWave();
         }
 
         document.addEventListener('keydown', (e) => { if(keysPressed.hasOwnProperty(e.key)) { e.preventDefault(); keysPressed[e.key] = true; }});
         document.addEventListener('keyup', (e) => { if(keysPressed.hasOwnProperty(e.key)) { e.preventDefault(); keysPressed[e.key] = false; }});
-
-        window.addEventListener('mousemove', (e) => {
-            mousePos = { x: e.clientX, y: e.clientY };
-            if (!player) return;
-            const worldCoords = screenToWorld(e.clientX, e.clientY);
-            const angle = Math.atan2(worldCoords.y - player.y, worldCoords.x - player.x);
-            turret.style.transform = `rotate(${angle * (180 / Math.PI)}deg)`;
-        });
-
-        window.addEventListener('mousedown', (e) => {
-            if (e.target.tagName !== 'BUTTON') {
-                isMouseDown = true;
-            }
-        });
-        window.addEventListener('mouseup', () => {
-            isMouseDown = false;
-        });
-
-        // --- Touch Event Handlers ---
+        window.addEventListener('mousemove', (e) => { mousePos = { x: e.clientX, y: e.clientY }; });
+        window.addEventListener('mousedown', (e) => { if (e.target.tagName !== 'BUTTON') isMouseDown = true; });
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
         gameArea.addEventListener('touchstart', (e) => {
             e.preventDefault();
             for (const touch of e.changedTouches) {
-                // Only assign a joystick if one isn't already active and the player exists
                 if (movementTouchId === null && player) {
-                    const playerScreenX = player.x - camera.x;
-                    const playerScreenY = player.y - camera.y;
-                    const distToPlayer = Math.hypot(touch.clientX - playerScreenX, touch.clientY - playerScreenY);
-
-                    if (distToPlayer < JOYSTICK_ACTIVATION_RADIUS) {
+                    const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
+                    const playerScreenX = (player.x - camera.x) * scale;
+                    const playerScreenY = (player.y - camera.y) * scale;
+                    if (Math.hypot(touch.clientX - playerScreenX, touch.clientY - playerScreenY) < JOYSTICK_ACTIVATION_RADIUS * scale) {
                         movementTouchId = touch.identifier;
                         joystickBasePos = { x: touch.clientX, y: touch.clientY };
-
-                        // Show joystick UI
                         joystickBase.style.display = 'block';
                         joystickHandle.style.display = 'block';
                         joystickBase.style.left = `${joystickBasePos.x - joystickBase.offsetWidth / 2}px`;
                         joystickBase.style.top = `${joystickBasePos.y - joystickBase.offsetHeight / 2}px`;
                         joystickHandle.style.left = `${joystickBasePos.x - joystickHandle.offsetWidth / 2}px`;
                         joystickHandle.style.top = `${joystickBasePos.y - joystickHandle.offsetHeight / 2}px`;
-                        
-                        continue; // This touch is now reserved for movement
+                        continue;
                     }
                 }
-
-                // If not assigned to movement, it's an action touch
                 activeTouches.set(touch.identifier, {
                     startTime: Date.now(),
                     startX: touch.clientX,
@@ -1059,16 +831,13 @@
                 });
             }
         });
-
         gameArea.addEventListener('touchmove', (e) => {
             e.preventDefault();
             for (const touch of e.changedTouches) {
                 if (touch.identifier === movementTouchId) {
                     const maxDist = joystickBase.offsetWidth / 2;
-                    const dx = touch.clientX - joystickBasePos.x;
-                    const dy = touch.clientY - joystickBasePos.y;
+                    const dx = touch.clientX - joystickBasePos.x, dy = touch.clientY - joystickBasePos.y;
                     const dist = Math.hypot(dx, dy);
-
                     if (dist > maxDist) {
                         playerMoveVector = { x: (dx / dist), y: (dy / dist) };
                         joystickHandle.style.left = `${joystickBasePos.x + playerMoveVector.x * maxDist - joystickHandle.offsetWidth / 2}px`;
@@ -1081,7 +850,6 @@
                 }
             }
         });
-
         gameArea.addEventListener('touchend', (e) => {
             e.preventDefault();
             for (const touch of e.changedTouches) {
@@ -1091,32 +859,22 @@
                     joystickBase.style.display = 'none';
                     joystickHandle.style.display = 'none';
                 }
-
                 if (activeTouches.has(touch.identifier)) {
                     const touchData = activeTouches.get(touch.identifier);
                     const duration = Date.now() - touchData.startTime;
-                    const endX = touch.clientX;
-                    const endY = touch.clientY;
-                    const dist = Math.hypot(endX - touchData.startX, endY - touchData.startY);
-
+                    const dist = Math.hypot(touch.clientX - touchData.startX, touch.clientY - touchData.startY);
                     if (duration <= SWIPE_DURATION && dist >= SWIPE_DISTANCE) {
-                        // Swipe to Dodge
                         if (player && dodgeCooldown <= 0) {
                             isDodging = dodgeDuration;
                             dodgeCooldown = dodgeCooldownTime;
                             const worldStart = screenToWorld(touchData.startX, touchData.startY);
-                            const worldEnd = screenToWorld(endX, endY);
+                            const worldEnd = screenToWorld(touch.clientX, touch.clientY);
                             const angle = Math.atan2(worldEnd.y - worldStart.y, worldEnd.x - worldStart.x);
                             player.dodgeVector = { x: Math.cos(angle), y: Math.sin(angle) };
                         }
                     } else {
-                        // Tap to Shoot
                         if (player && playerFireCooldown <= 0 && !isWaveTransitioning) {
-                            firePlayerBullet(endX, endY);
-                            // Add turret rotation for mobile shooting
-                            const worldCoords = screenToWorld(endX, endY);
-                            const angle = Math.atan2(worldCoords.y - player.y, worldCoords.x - player.x);
-                            turret.style.transform = `rotate(${angle * (180 / Math.PI)}deg)`;
+                            firePlayerBullet(touch.clientX, touch.clientY);
                         }
                     }
                     activeTouches.delete(touch.identifier);
@@ -1140,9 +898,12 @@
 
         function createDodgeTrail(x, y) {
             const trail = document.createElement('div');
+            const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
             trail.className = 'dodge-indicator';
-            trail.style.left = `${x - 5 - camera.x}px`;
-            trail.style.top = `${y - 5 - camera.y}px`;
+            trail.style.left = `${(x - 5 - camera.x) * scale}px`;
+            trail.style.top = `${(y - 5 - camera.y) * scale}px`;
+            trail.style.width = `${10 * scale}px`;
+            trail.style.height = `${10 * scale}px`;
             gameArea.appendChild(trail);
             setTimeout(() => trail.remove(), 300);
         }
@@ -1158,38 +919,33 @@
             if (player) {
                 if (playerFireCooldown > 0) playerFireCooldown--;
                 if (dodgeCooldown > 0) dodgeCooldown--;
-
-                // Health Regeneration
                 if (loopCounter % healthRegenRate === 0 && player.health < maxPlayerHealth) {
                     player.health = Math.min(maxPlayerHealth, player.health + healthRegenAmount);
                 }
-
                 if (isDodging > 0) {
                     player.x += player.dodgeVector.x * dodgeSpeed;
                     player.y += player.dodgeVector.y * dodgeSpeed;
                     isDodging--;
                     createDodgeTrail(player.x, player.y);
                 } else {
-                    // Keyboard Input
                     let keyDx = 0, keyDy = 0;
                     if (keysPressed.ArrowUp) keyDy -= 1; if (keysPressed.ArrowDown) keyDy += 1;
                     if (keysPressed.ArrowLeft) keyDx -= 1; if (keysPressed.ArrowRight) keyDx += 1;
-                    
-                    // Combine joystick and keyboard vectors. Clamp magnitude to 1.
                     let finalDx = playerMoveVector.x + keyDx;
                     let finalDy = playerMoveVector.y + keyDy;
                     const magnitude = Math.hypot(finalDx, finalDy);
-
                     if (magnitude > 0) {
                         const moveX = (finalDx / magnitude) * Math.min(magnitude, 1);
                         const moveY = (finalDy / magnitude) * Math.min(magnitude, 1);
-
                         player.x += moveX * playerSpeed;
                         player.y += moveY * playerSpeed;
                     }
                 }
-                
-                // Desktop shooting
+                // Aiming
+                const worldCoords = screenToWorld(mousePos.x, mousePos.y);
+                const turretAngle = Math.atan2(worldCoords.y - player.y, worldCoords.x - player.x);
+                turret.style.transform = `rotate(${turretAngle * 180 / Math.PI}deg)`;
+                // Shooting
                 if (isMouseDown && playerFireCooldown <= 0 && !isWaveTransitioning) {
                     firePlayerBullet(mousePos.x, mousePos.y);
                 }
@@ -1202,32 +958,18 @@
                     setNewPathForEnemy(enemy, isAggro);
                  });
             }
-
-            enemies.forEach((enemy, index) => {
-                // Stuck check
+            enemies.forEach((enemy) => {
                 const currentGridNode = getNodeFromWorldPoint(enemy.x, enemy.y);
                 if (currentGridNode) {
-                    if (currentGridNode.x === enemy.lastGridPos.x && currentGridNode.y === enemy.lastGridPos.y) {
-                        enemy.stuckCounter++;
-                    } else {
-                        enemy.stuckCounter = 0;
-                        enemy.lastGridPos = { x: currentGridNode.x, y: currentGridNode.y };
-                    }
-
-                    if (enemy.stuckCounter > 20) {
-                        setNewPathForEnemy(enemy, false); // false = not aggressive, find a random spot
-                        enemy.stuckCounter = 0; // Reset counter after finding new path
-                    }
+                    if (currentGridNode.x === enemy.lastGridPos.x && currentGridNode.y === enemy.lastGridPos.y) enemy.stuckCounter++;
+                    else { enemy.stuckCounter = 0; enemy.lastGridPos = { x: currentGridNode.x, y: currentGridNode.y }; }
+                    if (enemy.stuckCounter > 20) { setNewPathForEnemy(enemy, false); enemy.stuckCounter = 0; }
                 }
-
-
-                // MOVEMENT LOGIC FOR ALL PATHFINDING ENEMIES
                 if (enemy.path && enemy.path.length > 0) {
                     const nextNode = enemy.path[0];
                     const targetX = nextNode.x * gridSize + enemyRadius;
                     const targetY = nextNode.y * gridSize + enemyRadius;
-                    const moveDx = targetX - enemy.x;
-                    const moveDy = targetY - enemy.y;
+                    const moveDx = targetX - enemy.x, moveDy = targetY - enemy.y;
                     const dist = Math.hypot(moveDx, moveDy);
                     if (dist > enemy.speed) {
                         enemy.x += (moveDx / dist) * enemy.speed;
@@ -1236,36 +978,20 @@
                         enemy.x = targetX;
                         enemy.y = targetY;
                         enemy.path.shift();
-                        if (enemy.path.length === 0) {
-                           const isAggro = (enemy.type === 'chaser' && player) || (enemy.type === 'shooter');
-                           setNewPathForEnemy(enemy, isAggro);
-                        }
+                        if (enemy.path.length === 0) setNewPathForEnemy(enemy, enemy.type === 'chaser' || Math.random() < 0.5);
                     }
                 } else if (player) {
-                    // If enemy has no path for any reason, get one
-                    const isAggro = enemy.type === 'chaser' || (enemy.type === 'shooter' && Math.random() < 0.5);
-                    setNewPathForEnemy(enemy, isAggro);
+                    setNewPathForEnemy(enemy, enemy.type === 'chaser' || Math.random() < 0.5);
                 }
-
-                // SHOOTER-SPECIFIC AI LOGIC
                 if (player && !isWaveTransitioning && enemy.type === 'shooter') {
                     const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-                    enemy.turretElement.style.transform = `rotate(${angle * (180 / Math.PI)}deg)`;
-                    
-                    const isEnemyVisible = isEntityOnScreen(enemy);
-
-                    if (isEnemyVisible && hasLineOfSight(enemy.x, enemy.y, player.x, player.y)) {
+                    enemy.turretElement.style.transform = `rotate(${angle * 180 / Math.PI}deg)`;
+                    if (hasLineOfSight(enemy.x, enemy.y, player.x, player.y)) {
                         enemy.chargeTimer = Math.min(fireChargeTime, enemy.chargeTimer + 1);
                         const chargeRatio = enemy.chargeTimer / fireChargeTime;
-                        const r = 251 + (239 - 251) * chargeRatio;
-                        const g = 191 + (68 - 191) * chargeRatio;
-                        const b = 36 + (68 - 36) * chargeRatio;
+                        const r = 251 + (239 - 251) * chargeRatio, g = 191 + (68 - 191) * chargeRatio, b = 36 + (68 - 36) * chargeRatio;
                         enemy.turretElement.style.backgroundColor = `rgb(${r},${g},${b})`;
-
-                        if (enemy.chargeTimer === fireChargeTime) {
-                            fireEnemyBullet(enemy);
-                            enemy.chargeTimer = 0;
-                        }
+                        if (enemy.chargeTimer === fireChargeTime) { fireEnemyBullet(enemy); enemy.chargeTimer = 0; }
                     } else {
                         enemy.chargeTimer = 0;
                         enemy.turretElement.style.backgroundColor = '#fca5a5';
@@ -1275,17 +1001,15 @@
 
             // --- 3. Collision Detection & Resolution ---
             if (player) {
-                // Player vs Health Pickups
                 for (let i = healthPickups.length - 1; i >= 0; i--) {
                     const pickup = healthPickups[i];
                     if (Math.hypot(player.x - pickup.x, player.y - pickup.y) < player.radius + pickup.radius) {
                         player.health = Math.min(maxPlayerHealth, player.health + healthPickupValue);
-                        createExplosion(pickup.x, pickup.y, pickup.radius, '#22c55e'); // Green ripple
+                        createExplosion(pickup.x, pickup.y, pickup.radius, '#22c55e');
                         pickup.element.remove();
                         healthPickups.splice(i, 1);
                     }
                 }
-                 // Player vs Walls
                 walls.forEach(wall => {
                     const closestX = Math.max(wall.x, Math.min(player.x, wall.x + wall.width));
                     const closestY = Math.max(wall.y, Math.min(player.y, wall.y + wall.height));
@@ -1297,26 +1021,21 @@
                         player.y += overlap * Math.sin(angle);
                     }
                 });
-                // Player vs Enemies
                 for (let i = enemies.length - 1; i >= 0; i--) {
                     const enemy = enemies[i];
                     const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
                     const min_dist = player.radius + enemy.radius;
                     if (dist < min_dist) {
                         if (enemy.type === 'chaser') {
-                            if (isDodging <= 0) {
-                                player.health -= enemyChaserDamage;
-                            }
+                            if (isDodging <= 0) player.health -= enemyChaserDamage;
                             createExplosion(enemy.x, enemy.y, enemy.radius, '#f59e0b');
-                            enemy.element.remove();
-                            enemies.splice(i, 1);
-                            // Check for game over after taking damage
+                            enemy.element.remove(); enemies.splice(i, 1);
                              if (player.health <= 0) {
                                 createExplosion(player.x, player.y, player.radius, '#67e8f9');
                                 if(sphere) sphere.style.display = 'none';
                                 player = null; 
                                 setTimeout(() => gameOverModal.style.display = 'flex', 100);
-                                return; // Stop further processing if player is dead
+                                return;
                             }
                         } else {
                             const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
@@ -1326,19 +1045,15 @@
                         }
                     }
                 }
-                // Player Boundary Checks (against world, not screen)
                 player.x = Math.max(player.radius, Math.min(worldWidth - player.radius, player.x));
                 player.y = Math.max(player.radius, Math.min(worldHeight - player.radius, player.y));
             }
-
-            // Enemies vs Walls
             enemies.forEach(enemy => {
                 walls.forEach(wall => {
                     const closestX = Math.max(wall.x, Math.min(enemy.x, wall.x + wall.width));
                     const closestY = Math.max(wall.y, Math.min(enemy.y, wall.y + wall.height));
-                    const dist = Math.hypot(enemy.x - closestX, enemy.y - closestY);
-                    if (dist < enemy.radius) {
-                        const overlap = enemy.radius - dist;
+                    if (Math.hypot(enemy.x - closestX, enemy.y - closestY) < enemy.radius) {
+                        const overlap = enemy.radius - (Math.hypot(enemy.x - closestX, enemy.y - closestY));
                         const angle = Math.atan2(enemy.y - closestY, enemy.x - closestX);
                         enemy.x += overlap * Math.cos(angle);
                         enemy.y += overlap * Math.sin(angle);
@@ -1353,38 +1068,27 @@
                     bullet.x += bullet.dx; bullet.y += bullet.dy;
                     let hit = false;
                     for (const wall of walls) {
-                        const closestX = Math.max(wall.x, Math.min(bullet.x, wall.x + wall.width));
-                        const closestY = Math.max(wall.y, Math.min(bullet.y, wall.y + wall.height));
-                        if (Math.hypot(bullet.x - closestX, bullet.y - closestY) < bullet.radius) { hit = true; break; }
+                        if (Math.hypot(bullet.x - Math.max(wall.x, Math.min(bullet.x, wall.x + wall.width)), bullet.y - Math.max(wall.y, Math.min(bullet.y, wall.y + wall.height))) < bullet.radius) { hit = true; break; }
                     }
-                    if (hit) {
-                        createExplosion(bullet.x, bullet.y, bullet.radius, listIndex === 0 ? 'white' : '#f87171');
-                        bullet.element.remove(); bulletList.splice(i, 1); continue;
-                    }
-                    if (listIndex === 0) { // Player bullets
+                    if (hit) { createExplosion(bullet.x, bullet.y, bullet.radius, listIndex === 0 ? 'white' : '#f87171'); bullet.element.remove(); bulletList.splice(i, 1); continue; }
+                    if (listIndex === 0) {
                         for (let j = enemies.length - 1; j >= 0; j--) {
-                            const enemy = enemies[j];
-                            if (Math.hypot(bullet.x - enemy.x, bullet.y - enemy.y) < bullet.radius + enemy.radius) {
-                                createExplosion(enemy.x, enemy.y, enemy.radius, enemy.type === 'shooter' ? '#b91c1c' : '#f59e0b');
-                                drawPath([]);
-                                 if (Math.random() < healthPickupDropChance) {
-                                    spawnHealthPickup(enemy.x, enemy.y);
-                                }
-                                enemy.element.remove(); enemies.splice(j, 1);
+                            if (Math.hypot(bullet.x - enemies[j].x, bullet.y - enemies[j].y) < bullet.radius + enemies[j].radius) {
+                                createExplosion(enemies[j].x, enemies[j].y, enemies[j].radius, enemies[j].type === 'shooter' ? '#b91c1c' : '#f59e0b');
+                                if (Math.random() < healthPickupDropChance) spawnHealthPickup(enemies[j].x, enemies[j].y);
+                                enemies[j].element.remove(); enemies.splice(j, 1);
                                 hit = true;
-                                if(enemies.length === 0 && !isWaveTransitioning) {
-                                    showWaveCleared();
-                                }
+                                if(enemies.length === 0 && !isWaveTransitioning) showWaveCleared();
                                 break;
                             }
                         }
-                    } else { // Enemy bullets
+                    } else {
                         if (player && Math.hypot(bullet.x - player.x, bullet.y - player.y) < player.radius) {
-                            if (isDodging <= 0) { // Can't get hit while dodging
+                            if (isDodging <= 0) {
                                 player.health -= enemyBulletDamage;
                                 hit = true;
                                 if (player.health <= 0) {
-                                    createExplosion(player.x, player.y, player.radius, '#67e8f9'); // Cyan explosion
+                                    createExplosion(player.x, player.y, player.radius, '#67e8f9');
                                     if(sphere) sphere.style.display = 'none';
                                     player = null; 
                                     setTimeout(() => gameOverModal.style.display = 'flex', 100);
@@ -1392,88 +1096,97 @@
                             }
                         }
                     }
-                    if (hit) {
-                        createExplosion(bullet.x, bullet.y, bullet.radius, listIndex === 0 ? 'white' : '#f87171');
-                        bullet.element.remove(); bulletList.splice(i, 1); continue;
-                    }
-                    if (bullet.x < 0 || bullet.x > worldWidth || bullet.y < 0 || bullet.y > worldHeight) {
-                        bullet.element.remove(); bulletList.splice(i, 1);
-                    }
+                    if (hit) { createExplosion(bullet.x, bullet.y, bullet.radius, listIndex === 0 ? 'white' : '#f87171'); bullet.element.remove(); bulletList.splice(i, 1); continue; }
+                    if (bullet.x < 0 || bullet.x > worldWidth || bullet.y < 0 || bullet.y > worldHeight) { bullet.element.remove(); bulletList.splice(i, 1); }
                 }
             });
 
             // --- 5. Render all objects ---
             if(player) {
-                // Update camera to follow player
-                camera.x = player.x - gameArea.clientWidth / 2;
-                camera.y = player.y - gameArea.clientHeight / 2;
+                const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
+                const viewableWorldHeight = gameArea.clientHeight / scale;
 
-                // Clamp camera to world bounds
-                camera.x = Math.max(0, Math.min(worldWidth - gameArea.clientWidth, camera.x));
-                camera.y = Math.max(0, Math.min(worldHeight - gameArea.clientHeight, camera.y));
-                               
-                sphere.style.display = 'flex';
-                sphere.style.left = `${player.x - player.radius - camera.x}px`;
-                sphere.style.top = `${player.y - player.radius - camera.y}px`;
-                healthBar.style.width = `${(player.health / maxPlayerHealth) * 100}%`;
+                camera.x = player.x - (VIRTUAL_WIDTH / 2);
+                camera.y = player.y - (viewableWorldHeight / 2);
+                camera.x = Math.max(0, Math.min(worldWidth - VIRTUAL_WIDTH, camera.x));
+                camera.y = Math.max(0, Math.min(worldHeight - viewableWorldHeight, camera.y));
                 
-                // Update player turret color based on cooldown
+                // Render Player
+                const playerSize = player.radius * 2 * scale;
+                sphere.style.left = `${(player.x - player.radius - camera.x) * scale}px`;
+                sphere.style.top = `${(player.y - player.radius - camera.y) * scale}px`;
+                sphere.style.width = `${playerSize}px`;
+                sphere.style.height = `${playerSize}px`;
+
+                // Update UI
+                healthBar.style.width = `${(player.health / maxPlayerHealth) * 100}%`;
                 const cooldownRatio = playerFireCooldown / playerFireCooldownTime;
-                const coolColor = { r: 248, g: 250, b: 252 }; // slate-50 #f8fafc
-                const hotColor = { r: 250, g: 204, b: 21 }; // amber-400 #facc15
-                const r = coolColor.r + (hotColor.r - coolColor.r) * cooldownRatio;
-                const g = coolColor.g + (hotColor.g - coolColor.g) * cooldownRatio;
-                const b = coolColor.b + (hotColor.b - coolColor.b) * cooldownRatio;
+                const r = 248 + (250 - 248) * cooldownRatio, g = 250 + (204 - 250) * cooldownRatio, b = 252 + (21 - 252) * cooldownRatio;
                 turret.style.backgroundColor = `rgb(${r},${g},${b})`;
+
+                // Render all other game objects
+                walls.forEach(w => {
+                    w.element.style.left = `${(w.x - camera.x) * scale}px`;
+                    w.element.style.top = `${(w.y - camera.y) * scale}px`;
+                    w.element.style.width = `${w.width * scale}px`;
+                    w.element.style.height = `${w.height * scale}px`;
+                });
+                fogs.forEach(f => {
+                    f.element.style.left = `${(f.x - camera.x) * scale}px`;
+                    f.element.style.top = `${(f.y - camera.y) * scale}px`;
+                    f.element.style.width = `${f.size * scale}px`;
+                    f.element.style.height = `${f.size * scale}px`;
+                });
+                cobwebs.forEach(c => {
+                    c.element.style.left = `${(c.x - camera.x) * scale}px`;
+                    c.element.style.top = `${(c.y - camera.y) * scale}px`;
+                    c.element.style.width = `${gridSize * scale}px`;
+                    c.element.style.height = `${gridSize * scale}px`;
+                });
+                skeletons.forEach(s => {
+                    s.element.style.left = `${(s.x - camera.x) * scale}px`;
+                    s.element.style.top = `${(s.y - camera.y) * scale}px`;
+                    s.element.style.width = `${gridSize * scale}px`;
+                    s.element.style.height = `${gridSize * scale}px`;
+                });
+                enemies.forEach(e => {
+                    const enemySize = e.radius * 2 * scale;
+                    e.element.style.left = `${(e.x - e.radius - camera.x) * scale}px`;
+                    e.element.style.top = `${(e.y - e.radius - camera.y) * scale}px`;
+                    e.element.style.width = `${enemySize}px`;
+                    e.element.style.height = `${enemySize}px`;
+                });
+                bullets.forEach(b => {
+                    const bulletSize = b.radius * 2 * scale;
+                    b.element.style.left = `${(b.x - b.radius - camera.x) * scale}px`;
+                    b.element.style.top = `${(b.y - b.radius - camera.y) * scale}px`;
+                    b.element.style.width = `${bulletSize}px`;
+                    b.element.style.height = `${bulletSize}px`;
+                });
+                enemyBullets.forEach(b => {
+                    const bulletSize = b.radius * 2 * scale;
+                    b.element.style.left = `${(b.x - b.radius - camera.x) * scale}px`;
+                    b.element.style.top = `${(b.y - b.radius - camera.y) * scale}px`;
+                    b.element.style.width = `${bulletSize}px`;
+                    b.element.style.height = `${bulletSize}px`;
+                });
+                healthPickups.forEach(p => {
+                    const pickupSize = p.radius * 2 * scale;
+                    p.element.style.left = `${(p.x - p.radius - camera.x) * scale}px`;
+                    p.element.style.top = `${(p.y - p.radius - camera.y) * scale}px`;
+                    p.element.style.width = `${pickupSize}px`;
+                    p.element.style.height = `${pickupSize}px`;
+                });
             } else {
                 healthBar.style.width = '0%';
             }
-            
-            // --- RENDER STATIC AND DYNAMIC OBJECTS ---
-            walls.forEach(w => {
-                 w.element.style.left = `${w.x - camera.x}px`;
-                 w.element.style.top = `${w.y - camera.y}px`;
-                 w.element.style.width = `${w.width}px`;
-                 w.element.style.height = `${w.height}px`;
-            });
-
-            fogs.forEach(f => {
-                f.element.style.left = `${f.x - camera.x}px`;
-                f.element.style.top = `${f.y - camera.y}px`;
-            });
-            cobwebs.forEach(c => {
-                c.element.style.left = `${c.x - camera.x}px`;
-                c.element.style.top = `${c.y - camera.y}px`;
-            });
-            skeletons.forEach(s => {
-                s.element.style.left = `${s.x - camera.x}px`;
-                s.element.style.top = `${s.y - camera.y}px`;
-            });
-
-            enemies.forEach(e => {
-                e.element.style.left = `${e.x - e.radius - camera.x}px`;
-                e.element.style.top = `${e.y - e.radius - camera.y}px`;
-            });
-            bullets.forEach(b => {
-                b.element.style.left = `${b.x - b.radius - camera.x}px`;
-                b.element.style.top = `${b.y - b.radius - camera.y}px`;
-            });
-            enemyBullets.forEach(b => {
-                b.element.style.left = `${b.x - b.radius - camera.x}px`;
-                b.element.style.top = `${b.y - b.radius - camera.y}px`;
-            });
-            healthPickups.forEach(p => {
-                p.element.style.left = `${p.x - p.radius - camera.x}px`;
-                p.element.style.top = `${p.y - p.radius - camera.y}px`;
-            });
 
             requestAnimationFrame(gameLoop);
         }
 
-        // --- Initial setup on window load ---
         window.onload = () => {
-             worldContainer.style.width = `${worldWidth}px`;
-             worldContainer.style.height = `${worldHeight}px`;
+             worldContainer.style.width = `100%`;
+             worldContainer.style.height = `100%`;
         }
     </script>
 </body>
