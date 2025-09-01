@@ -26,6 +26,9 @@
             top: 0;
             left: 0;
             background-color: #1e293b; /* slate-800 for a darker dungeon feel */
+            /* --- FIX ADDED HERE --- */
+            will-change: transform;
+            transform: translateZ(0);
         }
         #sphere {
             position: absolute;
@@ -198,7 +201,6 @@
 </head>
 <body class="bg-slate-900 text-white flex items-center justify-center h-screen m-0">
 
-    <!-- UI Elements - Positioned absolutely relative to the body -->
     <div class="absolute top-5 left-5 z-20">
         <div id="wave-counter" class="text-2xl font-bold text-slate-400 mb-2"></div>
         <div id="health-bar-container">
@@ -206,22 +208,16 @@
         </div>
     </div>
 
-    <!-- The container for our sphere -->
     <div id="game-area">
-         <!-- This container holds all game world objects and will be moved for the camera effect -->
          <div id="world-container">
-            <!-- The sphere element will be appended here by JS -->
-        </div>
+            </div>
         
-        <!-- Joystick UI, relative to the game-area (screen) -->
         <div id="joystick-base" class="absolute hidden w-24 h-24 bg-slate-500/30 rounded-full"></div>
         <div id="joystick-handle" class="absolute hidden w-12 h-12 bg-slate-400/50 rounded-full border-2 border-slate-300"></div>
 
-        <!-- Wave cleared message, relative to the game-area (screen) -->
         <div id="wave-cleared-message" class="absolute inset-0 flex items-center justify-center">Wave Cleared!</div>
     </div>
 
-    <!-- Start Menu Modal -->
     <div id="start-modal" class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-30">
         <div class="bg-slate-800 p-8 rounded-xl shadow-2xl text-center">
             <h2 class="text-3xl font-bold text-cyan-400 mb-4">Dungeon Shooter</h2>
@@ -241,7 +237,6 @@
         </div>
     </div>
     
-    <!-- Game Over Modal -->
     <div id="game-over-modal" class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-30">
         <div class="bg-slate-800 p-8 rounded-xl shadow-2xl text-center">
             <h2 class="text-3xl font-bold text-red-500 mb-4">You Have Perished</h2>
@@ -1450,4 +1445,3 @@
     </script>
 </body>
 </html>
-
