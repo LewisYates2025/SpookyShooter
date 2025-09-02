@@ -255,8 +255,8 @@
 
 
         // --- Configuration ---
-        const VIRTUAL_WIDTH = 1800; // The desired horizontal resolution of the game
-        const VIRTUAL_HEIGHT = 1013; // To maintain a 16:9 aspect ratio
+        const VIRTUAL_WIDTH = 900; // REDUCED for a 100% zoom effect
+        const VIRTUAL_HEIGHT = 506; // REDUCED to maintain the 16:9 aspect ratio
         const playerSpeed = 8;
         const bulletSpeed = 32;
         const enemyBulletSpeed = bulletSpeed / 4; 
@@ -1101,7 +1101,7 @@
 
             // --- 5. Render all objects ---
             if(player) {
-                // *** NEW SCALING AND CAMERA LOGIC ***
+                // *** SCALING AND CAMERA LOGIC ***
                 const scaleX = gameArea.clientWidth / VIRTUAL_WIDTH;
                 const scaleY = gameArea.clientHeight / VIRTUAL_HEIGHT;
                 scale = Math.min(scaleX, scaleY); // Update the global scale
