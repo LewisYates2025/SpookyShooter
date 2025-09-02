@@ -17,14 +17,17 @@
         }
         #game-area {
             position: relative;
-            /* width and height are now set by JavaScript */
+            /* width and height are set by JavaScript */
             overflow: hidden; /* This acts as our camera viewport */
+            background-color: #0f172a; /* A fallback background for letterboxing */
         }
         #world-container {
             position: absolute;
             top: 0;
             left: 0;
             background-color: #1e293b; /* slate-800 for a darker dungeon feel */
+            /* NEW: transform-origin is key for scaling from the corner */
+            transform-origin: top left;
         }
         #sphere {
             position: absolute;
@@ -198,6 +201,8 @@
         </div>
     </div>
 
+    <div id="build-number" class="absolute top-5 right-5 z-20 text-sm font-mono text-slate-500"></div>
+
     <div id="game-area">
          <div id="world-container">
             </div>
@@ -251,9 +256,11 @@
         const healthBar = document.getElementById('health-bar');
         const joystickBase = document.getElementById('joystick-base');
         const joystickHandle = document.getElementById('joystick-handle');
+        const buildNumberEl = document.getElementById('build-number'); 
 
 
         // --- Configuration ---
+        const BUILD_NUMBER = '20250902.2233'; // NEW: Static build number
         const VIRTUAL_WIDTH = 900; 
         const VIRTUAL_HEIGHT = 506;
         const playerSpeed = 8;
@@ -305,7 +312,9 @@
         let isDodging = 0;
         let dodgeCooldown = 0;
         let fogs = [], cobwebs = [], skeletons = [];
-        let scale = 1; // Global scale, calculated once per frame
+        let scale = 1;
+        let offsetX = 0; // NEW: offset for centering the world container
+        let offsetY = 0;
         
         // --- Touch State ---
         let activeTouches = new Map();
@@ -631,12 +640,13 @@
         function createExplosion(x, y, radius, color) {
             const ripple = document.createElement('div');
             ripple.className = 'ripple';
-            ripple.style.left = `${(x - radius - camera.x) * scale}px`;
-            ripple.style.top = `${(y - radius - camera.y) * scale}px`;
-            ripple.style.width = `${(radius * 2) * scale}px`;
-            ripple.style.height = `${(radius * 2) * scale}px`;
-            ripple.style.boxShadow = `0 0 0 ${4 * scale}px ${color}`;
-            gameArea.appendChild(ripple);
+            // NEW: Appending to worldContainer simplifies positioning
+            ripple.style.left = `${x - radius - camera.x}px`;
+            ripple.style.top = `${y - radius - camera.y}px`;
+            ripple.style.width = `${radius * 2}px`;
+            ripple.style.height = `${radius * 2}px`;
+            ripple.style.boxShadow = `0 0 0 4px ${color}`; // No longer needs scaling
+            worldContainer.appendChild(ripple);
             setTimeout(() => ripple.remove(), 170);
         }
         
@@ -658,9 +668,13 @@
         }
         
         function screenToWorld(screenX, screenY) {
-            // This now uses the global 'scale' variable
-            const worldX = (screenX / scale) + camera.x;
-            const worldY = (screenY / scale) + camera.y;
+            // NEW: This logic now accounts for the container's offset and scale
+            const containerX = screenX - offsetX;
+            const containerY = screenY - offsetY;
+            const virtualX = containerX / scale;
+            const virtualY = containerY / scale;
+            const worldX = virtualX + camera.x;
+            const worldY = virtualY + camera.y;
             return { x: worldX, y: worldY };
         }
 
@@ -808,8 +822,9 @@
             e.preventDefault();
             for (const touch of e.changedTouches) {
                 if (movementTouchId === null && player) {
-                    const playerScreenX = (player.x - camera.x) * scale;
-                    const playerScreenY = (player.y - camera.y) * scale;
+                    // NEW: account for offset when checking joystick activation
+                    const playerScreenX = (player.x - camera.x) * scale + offsetX;
+                    const playerScreenY = (player.y - camera.y) * scale + offsetY;
                     if (Math.hypot(touch.clientX - playerScreenX, touch.clientY - playerScreenY) < JOYSTICK_ACTIVATION_RADIUS * scale) {
                         movementTouchId = touch.identifier;
                         joystickBasePos = { x: touch.clientX, y: touch.clientY };
@@ -897,11 +912,11 @@
         function createDodgeTrail(x, y) {
             const trail = document.createElement('div');
             trail.className = 'dodge-indicator';
-            trail.style.left = `${(x - 5 - camera.x) * scale}px`;
-            trail.style.top = `${(y - 5 - camera.y) * scale}px`;
-            trail.style.width = `${10 * scale}px`;
-            trail.style.height = `${10 * scale}px`;
-            gameArea.appendChild(trail);
+            trail.style.left = `${x - 5 - camera.x}px`;
+            trail.style.top = `${y - 5 - camera.y}px`;
+            trail.style.width = `10px`;
+            trail.style.height = `10px`;
+            worldContainer.appendChild(trail); // Append to world container
             setTimeout(() => trail.remove(), 300);
         }
 
@@ -949,6 +964,7 @@
             }
             
             // --- 2. Enemy AI & Movement ---
+            // (No changes needed in this section)
             if (loopCounter % pathfindingUpdateRate === 0 && enemies.length > 0) {
                  enemies.forEach((enemy) => {
                     const isAggro = (enemy.type === 'chaser' && player) || (enemy.type === 'shooter' && Math.random() < 0.5);
@@ -997,6 +1013,7 @@
             });
 
             // --- 3. Collision Detection & Resolution ---
+            // (No changes needed in this section)
             if (player) {
                 for (let i = healthPickups.length - 1; i >= 0; i--) {
                     const pickup = healthPickups[i];
@@ -1059,6 +1076,7 @@
             });
 
             // --- 4. Bullet Movement & Collision ---
+            // (No changes needed in this section)
             [bullets, enemyBullets].forEach((bulletList, listIndex) => {
                 for (let i = bulletList.length - 1; i >= 0; i--) {
                     const bullet = bulletList[i];
@@ -1100,83 +1118,83 @@
 
             // --- 5. Render all objects ---
             if(player) {
-                // *** SCALING AND CAMERA LOGIC ***
+                // *** NEW: PERMANENT RENDERING AND SCALING LOGIC ***
                 const scaleX = gameArea.clientWidth / VIRTUAL_WIDTH;
                 const scaleY = gameArea.clientHeight / VIRTUAL_HEIGHT;
-                scale = Math.min(scaleX, scaleY); // Update the global scale
+                scale = Math.min(scaleX, scaleY);
+                
+                const renderWidth = VIRTUAL_WIDTH * scale;
+                const renderHeight = VIRTUAL_HEIGHT * scale;
+                offsetX = (gameArea.clientWidth - renderWidth) / 2;
+                offsetY = (gameArea.clientHeight - renderHeight) / 2;
 
+                worldContainer.style.width = `${VIRTUAL_WIDTH}px`;
+                worldContainer.style.height = `${VIRTUAL_HEIGHT}px`;
+                worldContainer.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+                
                 camera.x = player.x - (VIRTUAL_WIDTH / 2);
                 camera.y = player.y - (VIRTUAL_HEIGHT / 2);
-                
-                // Clamp camera to world boundaries
                 camera.x = Math.max(0, Math.min(worldWidth - VIRTUAL_WIDTH, camera.x));
                 camera.y = Math.max(0, Math.min(worldHeight - VIRTUAL_HEIGHT, camera.y));
                 
-                // Render Player
-                const playerSize = player.radius * 2 * scale;
-                sphere.style.left = `${(player.x - player.radius - camera.x) * scale}px`;
-                sphere.style.top = `${(player.y - player.radius - camera.y) * scale}px`;
-                sphere.style.width = `${playerSize}px`;
-                sphere.style.height = `${playerSize}px`;
+                // *** NEW: Simplified render calls. No more '* scale'. ***
+                sphere.style.left = `${player.x - player.radius - camera.x}px`;
+                sphere.style.top = `${player.y - player.radius - camera.y}px`;
+                sphere.style.width = `${player.radius * 2}px`;
+                sphere.style.height = `${player.radius * 2}px`;
 
-                // Update UI
                 healthBar.style.width = `${(player.health / maxPlayerHealth) * 100}%`;
                 const cooldownRatio = playerFireCooldown / playerFireCooldownTime;
                 const r = 248 + (250 - 248) * cooldownRatio, g = 250 + (204 - 250) * cooldownRatio, b = 252 + (21 - 252) * cooldownRatio;
                 turret.style.backgroundColor = `rgb(${r},${g},${b})`;
 
-                // Render all other game objects (they will now use the correct global 'scale')
                 walls.forEach(w => {
-                    w.element.style.left = `${(w.x - camera.x) * scale}px`;
-                    w.element.style.top = `${(w.y - camera.y) * scale}px`;
-                    w.element.style.width = `${w.width * scale}px`;
-                    w.element.style.height = `${w.height * scale}px`;
+                    w.element.style.left = `${w.x - camera.x}px`;
+                    w.element.style.top = `${w.y - camera.y}px`;
+                    w.element.style.width = `${w.width}px`;
+                    w.element.style.height = `${w.height}px`;
                 });
                 fogs.forEach(f => {
-                    f.element.style.left = `${(f.x - camera.x) * scale}px`;
-                    f.element.style.top = `${(f.y - camera.y) * scale}px`;
-                    f.element.style.width = `${f.size * scale}px`;
-                    f.element.style.height = `${f.size * scale}px`;
+                    f.element.style.left = `${f.x - camera.x}px`;
+                    f.element.style.top = `${f.y - camera.y}px`;
+                    f.element.style.width = `${f.size}px`;
+                    f.element.style.height = `${f.size}px`;
                 });
                 cobwebs.forEach(c => {
-                    c.element.style.left = `${(c.x - camera.x) * scale}px`;
-                    c.element.style.top = `${(c.y - camera.y) * scale}px`;
-                    c.element.style.width = `${gridSize * scale}px`;
-                    c.element.style.height = `${gridSize * scale}px`;
+                    c.element.style.left = `${c.x - camera.x}px`;
+                    c.element.style.top = `${c.y - camera.y}px`;
+                    c.element.style.width = `${gridSize}px`;
+                    c.element.style.height = `${gridSize}px`;
                 });
                 skeletons.forEach(s => {
-                    s.element.style.left = `${(s.x - camera.x) * scale}px`;
-                    s.element.style.top = `${(s.y - camera.y) * scale}px`;
-                    s.element.style.width = `${gridSize * scale}px`;
-                    s.element.style.height = `${gridSize * scale}px`;
+                    s.element.style.left = `${s.x - camera.x}px`;
+                    s.element.style.top = `${s.y - camera.y}px`;
+                    s.element.style.width = `${gridSize}px`;
+                    s.element.style.height = `${gridSize}px`;
                 });
                 enemies.forEach(e => {
-                    const enemySize = e.radius * 2 * scale;
-                    e.element.style.left = `${(e.x - e.radius - camera.x) * scale}px`;
-                    e.element.style.top = `${(e.y - e.radius - camera.y) * scale}px`;
-                    e.element.style.width = `${enemySize}px`;
-                    e.element.style.height = `${enemySize}px`;
+                    e.element.style.left = `${e.x - e.radius - camera.x}px`;
+                    e.element.style.top = `${e.y - e.radius - camera.y}px`;
+                    e.element.style.width = `${e.radius * 2}px`;
+                    e.element.style.height = `${e.radius * 2}px`;
                 });
                 bullets.forEach(b => {
-                    const bulletSize = b.radius * 2 * scale;
-                    b.element.style.left = `${(b.x - b.radius - camera.x) * scale}px`;
-                    b.element.style.top = `${(b.y - b.radius - camera.y) * scale}px`;
-                    b.element.style.width = `${bulletSize}px`;
-                    b.element.style.height = `${bulletSize}px`;
+                    b.element.style.left = `${b.x - b.radius - camera.x}px`;
+                    b.element.style.top = `${b.y - b.radius - camera.y}px`;
+                    b.element.style.width = `${b.radius * 2}px`;
+                    b.element.style.height = `${b.radius * 2}px`;
                 });
                 enemyBullets.forEach(b => {
-                    const bulletSize = b.radius * 2 * scale;
-                    b.element.style.left = `${(b.x - b.radius - camera.x) * scale}px`;
-                    b.element.style.top = `${(b.y - b.radius - camera.y) * scale}px`;
-                    b.element.style.width = `${bulletSize}px`;
-                    b.element.style.height = `${bulletSize}px`;
+                    b.element.style.left = `${b.x - b.radius - camera.x}px`;
+                    b.element.style.top = `${b.y - b.radius - camera.y}px`;
+                    b.element.style.width = `${b.radius * 2}px`;
+                    b.element.style.height = `${b.radius * 2}px`;
                 });
                 healthPickups.forEach(p => {
-                    const pickupSize = p.radius * 2 * scale;
-                    p.element.style.left = `${(p.x - p.radius - camera.x) * scale}px`;
-                    p.element.style.top = `${(p.y - p.radius - camera.y) * scale}px`;
-                    p.element.style.width = `${pickupSize}px`;
-                    p.element.style.height = `${pickupSize}px`;
+                    p.element.style.left = `${p.x - p.radius - camera.x}px`;
+                    p.element.style.top = `${p.y - p.radius - camera.y}px`;
+                    p.element.style.width = `${p.radius * 2}px`;
+                    p.element.style.height = `${p.radius * 2}px`;
                 });
             } else {
                 healthBar.style.width = '0%';
@@ -1188,14 +1206,12 @@
         function resizeGame() {
             gameArea.style.width = `${window.innerWidth}px`;
             gameArea.style.height = `${window.innerHeight}px`;
-            worldContainer.style.width = `100%`;
-            worldContainer.style.height = `100%`;
         }
         
-        // Set the game size on load and whenever the window resizes
         window.addEventListener('resize', resizeGame);
         window.onload = () => {
             resizeGame(); // Initial sizing
+            buildNumberEl.textContent = `Build: ${BUILD_NUMBER}`;
         };
     </script>
 </body>
