@@ -17,8 +17,7 @@
         }
         #game-area {
             position: relative;
-            width: 100vw;
-            height: 100vh;
+            /* width and height are now set by JavaScript */
             overflow: hidden; /* This acts as our camera viewport */
         }
         #world-container {
@@ -255,8 +254,8 @@
 
 
         // --- Configuration ---
-        const VIRTUAL_WIDTH = 900; // REDUCED for a 100% zoom effect
-        const VIRTUAL_HEIGHT = 506; // REDUCED to maintain the 16:9 aspect ratio
+        const VIRTUAL_WIDTH = 900; 
+        const VIRTUAL_HEIGHT = 506;
         const playerSpeed = 8;
         const bulletSpeed = 32;
         const enemyBulletSpeed = bulletSpeed / 4; 
@@ -753,8 +752,8 @@
                     let attempts = 0;
                     const MAX_ATTEMPTS = 100;
                     do {
-                        const viewableWorldWidth = gameArea.clientWidth / scale;
-                        const viewableWorldHeight = gameArea.clientHeight / scale;
+                        const viewableWorldWidth = VIRTUAL_WIDTH;
+                        const viewableWorldHeight = VIRTUAL_HEIGHT;
                         const startGridX = Math.max(0, Math.floor(camera.x / gridSize));
                         const startGridY = Math.max(0, Math.floor(camera.y / gridSize));
                         const endGridX = Math.min(gridWidth - 1, Math.floor((camera.x + viewableWorldWidth) / gridSize));
@@ -1186,10 +1185,18 @@
             requestAnimationFrame(gameLoop);
         }
 
-        window.onload = () => {
-             worldContainer.style.width = `100%`;
-             worldContainer.style.height = `100%`;
+        function resizeGame() {
+            gameArea.style.width = `${window.innerWidth}px`;
+            gameArea.style.height = `${window.innerHeight}px`;
+            worldContainer.style.width = `100%`;
+            worldContainer.style.height = `100%`;
         }
+        
+        // Set the game size on load and whenever the window resizes
+        window.addEventListener('resize', resizeGame);
+        window.onload = () => {
+            resizeGame(); // Initial sizing
+        };
     </script>
 </body>
 </html>
