@@ -256,6 +256,7 @@
 
         // --- Configuration ---
         const VIRTUAL_WIDTH = 1800; // The desired horizontal resolution of the game
+        const VIRTUAL_HEIGHT = 1013; // To maintain a 16:9 aspect ratio
         const playerSpeed = 8;
         const bulletSpeed = 32;
         const enemyBulletSpeed = bulletSpeed / 4; 
@@ -305,6 +306,7 @@
         let isDodging = 0;
         let dodgeCooldown = 0;
         let fogs = [], cobwebs = [], skeletons = [];
+        let scale = 1; // Global scale, calculated once per frame
         
         // --- Touch State ---
         let activeTouches = new Map();
@@ -630,7 +632,6 @@
         function createExplosion(x, y, radius, color) {
             const ripple = document.createElement('div');
             ripple.className = 'ripple';
-            const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
             ripple.style.left = `${(x - radius - camera.x) * scale}px`;
             ripple.style.top = `${(y - radius - camera.y) * scale}px`;
             ripple.style.width = `${(radius * 2) * scale}px`;
@@ -658,7 +659,7 @@
         }
         
         function screenToWorld(screenX, screenY) {
-            const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
+            // This now uses the global 'scale' variable
             const worldX = (screenX / scale) + camera.x;
             const worldY = (screenY / scale) + camera.y;
             return { x: worldX, y: worldY };
@@ -752,7 +753,6 @@
                     let attempts = 0;
                     const MAX_ATTEMPTS = 100;
                     do {
-                        const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
                         const viewableWorldWidth = gameArea.clientWidth / scale;
                         const viewableWorldHeight = gameArea.clientHeight / scale;
                         const startGridX = Math.max(0, Math.floor(camera.x / gridSize));
@@ -809,7 +809,6 @@
             e.preventDefault();
             for (const touch of e.changedTouches) {
                 if (movementTouchId === null && player) {
-                    const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
                     const playerScreenX = (player.x - camera.x) * scale;
                     const playerScreenY = (player.y - camera.y) * scale;
                     if (Math.hypot(touch.clientX - playerScreenX, touch.clientY - playerScreenY) < JOYSTICK_ACTIVATION_RADIUS * scale) {
@@ -898,7 +897,6 @@
 
         function createDodgeTrail(x, y) {
             const trail = document.createElement('div');
-            const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
             trail.className = 'dodge-indicator';
             trail.style.left = `${(x - 5 - camera.x) * scale}px`;
             trail.style.top = `${(y - 5 - camera.y) * scale}px`;
@@ -1103,13 +1101,17 @@
 
             // --- 5. Render all objects ---
             if(player) {
-                const scale = gameArea.clientWidth / VIRTUAL_WIDTH;
-                const viewableWorldHeight = gameArea.clientHeight / scale;
+                // *** NEW SCALING AND CAMERA LOGIC ***
+                const scaleX = gameArea.clientWidth / VIRTUAL_WIDTH;
+                const scaleY = gameArea.clientHeight / VIRTUAL_HEIGHT;
+                scale = Math.min(scaleX, scaleY); // Update the global scale
 
                 camera.x = player.x - (VIRTUAL_WIDTH / 2);
-                camera.y = player.y - (viewableWorldHeight / 2);
+                camera.y = player.y - (VIRTUAL_HEIGHT / 2);
+                
+                // Clamp camera to world boundaries
                 camera.x = Math.max(0, Math.min(worldWidth - VIRTUAL_WIDTH, camera.x));
-                camera.y = Math.max(0, Math.min(worldHeight - viewableWorldHeight, camera.y));
+                camera.y = Math.max(0, Math.min(worldHeight - VIRTUAL_HEIGHT, camera.y));
                 
                 // Render Player
                 const playerSize = player.radius * 2 * scale;
@@ -1124,7 +1126,7 @@
                 const r = 248 + (250 - 248) * cooldownRatio, g = 250 + (204 - 250) * cooldownRatio, b = 252 + (21 - 252) * cooldownRatio;
                 turret.style.backgroundColor = `rgb(${r},${g},${b})`;
 
-                // Render all other game objects
+                // Render all other game objects (they will now use the correct global 'scale')
                 walls.forEach(w => {
                     w.element.style.left = `${(w.x - camera.x) * scale}px`;
                     w.element.style.top = `${(w.y - camera.y) * scale}px`;
